@@ -1,62 +1,167 @@
-#Chess Game Buil
+# Chess Game Build: Step 1 & Step 2 Complete
+# Text-based chess — visual board, move input, live updates
 
-#Step 1 create an 8x8 board - last time we did this we had an issue so hopefully this time it will work, success here is defining variables and using them to create a board, creating necessary loops and ensuring the board is the correct size, key to also test along the way and leave that in the code be it hide it or not (done 3 times)
+# ------------------------------------------
+# Helper Functions: Piece Symbols & Printing
+# ------------------------------------------
+
+def get_symbol(piece):
+    if piece is None:
+        return ' . '
+    symbols = {
+        ('white', 'pawn'): '♙', ('black', 'pawn'): '♟',
+        ('white', 'rook'): '♖', ('black', 'rook'): '♜',
+        ('white', 'knight'): '♘', ('black', 'knight'): '♞',
+        ('white', 'bishop'): '♗', ('black', 'bishop'): '♝',
+        ('white', 'queen'): '♕', ('black', 'queen'): '♛',
+        ('white', 'king'): '♔', ('black', 'king'): '♚'
+    }
+    return f" {symbols.get((piece['color'], piece['kind']), '?')} "
+
+def print_board():
+    print("  A  B  C  D  E  F  G  H")
+    for i, row in enumerate(board):
+        print(8 - i, end=' ')
+        for square in row:
+            print(get_symbol(square), end='')
+        print(' ', 8 - i)
+    print("  A  B  C  D  E  F  G  H")
+
+# ------------------------------------------
+# Step 1: Create Board & Place Pieces
+# ------------------------------------------
 
 def make_piece(color, kind):
-# this here allows me to define the 2 variables of interest - color of chess pieces and chess pieces kind (or types)
     return {"color": color, "kind": kind}
-#this line here does 2 things - it provides gives the 2 varbailes in def make_piece values and allows for them to be labelled, the curly brackets also ensure it is a dictionary we are calling/using
 
-'''print(make_piece("white", "pawn"))
-# this line here calls the function and provides the values for the variables - a test to see if it works
-
-print(type(make_piece("color", "kind")))
-# this line here calls the return type of the function - a test to see if it works - illustrates that it is a dictionary'''
-
+# Create an empty 8x8 board
 board = [[None for _ in range(8)] for _ in range(8)]
-# no pieces on the board yet - 8x8 board, this line also allows us to avoid using a for loop to create the board - the none part means row 2 through the 5 are empty
 
+# Define piece order for back rows
 back_row = ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"]
+
+# Place black and white pieces
 for col in range(8): 
-    board[0][col] = make_piece("black", back_row[col])
-    board[1][col] = make_piece("black", "pawn")
-# here we are defining the black pieces and their positions on the board - the for loop allows us to do this without having to write out each piece and its position
+    board[0][col] = make_piece("black", back_row[col])  # black back row
+    board[1][col] = make_piece("black", "pawn")         # black pawns
+    board[6][col] = make_piece("white", "pawn")         # white pawns
+    board[7][col] = make_piece("white", back_row[col])  # white back row
 
-    board[6][col] = make_piece("white", "pawn")
-    board[7][col] = make_piece("white", back_row[col])
-# here we are defining the white pieces and their positions on the board - the for loop allows us to do this without having to write out each piece and its position
+# Print the starting board
+print_board()
 
-'''pawn_count = 0
+# Temporary pawn rule checker to avoid error in Step 2
+def is_valid_pawn_move(piece, start_row, start_col, end_row, end_col):
+    return True  # Allows all pawn moves for now
 
-for row in board:
-    for square in row:
-        if square is not None and square['kind'] == 'pawn':
-            pawn_count += 1
+# ------------------------------------------
+# Step 2: Player Move Input + Move Execution
+# Key Tasks: Player Input, Move Exedution, Basic Validation
+# ------------------------------------------
 
-print(f"Number of pawns on the board: {pawn_count}")
-
-# above is a sense check to count how many pawn pieces are on the borard  - should be 16, my understanding is that the first for loop is for each row and the secod for loop is for each sqaure in the row (no need to column search). There was an initial error in the if part where it was "type" rather than "kind". Our definition of make_piece is a dictionary, so we need to call the key "kind" to get the value "pawn"'''
-
-
-
-
-
-#Step 2 - allow players to enter moves and update the board (chess notation such as e2 e4, make it case sensitive), convert moves to board coordinates, so row and column numbers, move the piece to the desired sqaure - note checking if move is valid or not is a Step 3 action. 
-
-move = input("Enter your move (e.g., E2 E4): ")
-# this line here allows the user to enter a move in chess notation]
-
+# prompt for player input
+move = input ("Enter your move (e.g., e2 e4): ").strip().lower()
 start_square, end_square = move.split()
-# was a bit lost at first but this line here splits the move into 2 parts - the start square and the end square
-
-'''print (start_square, end_square)
-# quick sense check really to see if the split worked - to help capture moves'''
 
 start_row = 8 - int(start_square[1])
-start_col = ord(start_square[0].lower()) - ord('a')
+start_col = ord(start_square[0]) - ord('a')
 
 end_row = 8 - int(end_square[1])
-end_col = ord(end_square[0].lower()) - ord('a')
+end_col = ord(end_square[0]) - ord('a')
 
-board[end_row][end_col] = board[start_row][start_col]
+piece = board[start_row][start_col]
+if piece is None:
+    print("Invalid move: No piece at the starting square.")
+    exit()
+
+if piece['kind'] == 'pawn':
+    if not is_valid_pawn_move(piece, start_row, start_col, end_row, end_col):
+        print("Invalid move for pawn.")
+        exit()
+
+board[end_row][end_col] = piece
 board[start_row][start_col] = None
+print_board()
+
+# ------------------------------------------
+# Step 3: Player Move Input + Move Execution
+# Key Tasks: Movement Validation, Basic Rules, Capture Logic & Check
+# ------------------------------------------
+
+def is_valid_move(piece, start_row, start_col, end_row, end_col):
+    if piece is None:
+        return False
+
+    # Basic movement validation (to be expanded)
+    if piece['kind'] == 'pawn':
+        direction = 1 if piece['color'] == 'white' else -1
+        start_row_limit = 6 if piece['color'] == 'white' else 1
+        if start_row == start_row_limit and end_row == start_row + 2 * direction and start_col == end_col:
+            return True  # Double move from starting position
+        elif end_row == start_row + direction and start_col == end_col:
+            return True  # Single move forward
+        elif end_row == start_row + direction and abs(start_col - end_col) == 1:
+            return True  # Capture move
+
+    # Add more rules for other pieces here...
+    if piece['kind'] == 'rook':
+        if start_col == end_col:  # Vertical move
+            step = 1 if end_row > start_row else -1
+            for r in range(start_row + step, end_row, step):
+                if board[r][start_col] is not None:  # Path is blocked
+                    return False
+        elif start_row == end_row:  # Horizontal move
+            step = 1 if end_col > start_col else -1
+            for c in range(start_col + step, end_col, step):
+                if board[start_row][c] is not None:  # Path is blocked
+                    return False
+        else:
+            return False  # Rooks can only move in straight lines
+
+        # Ensure destination is empty or occupied by an opponent's piece
+        if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
+            return True
+        
+    if piece['kind'] == 'bishop':
+        # Check if the move is diagonal
+        if abs(start_row - end_row) != abs(start_col - end_col):
+            return False  # Bishops can only move diagonally
+
+        # Determine direction of movement
+        row_step = 1 if end_row > start_row else -1
+        col_step = 1 if end_col > start_col else -1
+
+        # Check if the path is clear
+        r, c = start_row + row_step, start_col + col_step
+        while r != end_row and c != end_col:
+            if board[r][c] is not None:  # Path is blocked
+                return False
+            r += row_step
+            c += col_step
+
+        # Final square check
+        if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
+            return True
+        
+    if piece['kind'] == 'queen':
+        # Combine rook and bishop movement rules
+        if (start_col == end_col or start_row == end_row):  # Rook-like movement
+            step = 1 if end_row > start_row else -1
+            for r in range(start_row + step, end_row, step):
+                if board[r][start_col] is not None:  # Path is blocked
+                    return False
+        elif abs(start_row - end_row) == abs(start_col - end_col):  # Bishop-like movement
+            row_step = 1 if end_row > start_row else -1
+            col_step = 1 if end_col > start_col else -1
+            r, c = start_row + row_step, start_col + col_step
+            while r != end_row and c != end_col:
+                if board[r][c] is not None:  # Path is blocked
+                    return False
+                r += row_step
+                c += col_step
+
+            # Final square check
+            if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
+                return True
+
+    return False  # Default to invalid move
