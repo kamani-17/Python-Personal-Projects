@@ -25,6 +25,8 @@ def print_board():
         print(' ', 8 - i)
     print("  A  B  C  D  E  F  G  H")
 
+# Reviewing the code above: we ca see that we define what pieces are, the name and colour of each piece which we create in a list of dictionaries. We also define the board as a list of lists, where each square is neither empty or occupied by a piece. 
+
 # ------------------------------------------
 # Step 1: Create Board & Place Pieces
 # ------------------------------------------
@@ -48,6 +50,8 @@ for col in range(8):
 print("Initial Board Setup:")
 print_board()
 
+# Reviewing the code above: we define a function to make a piece, which takes in the colour and kind of piece. We then create an empty board, then define the back row of the board, which is the first row of pieces. We then [lace the bacl and white pieces - pawns and special pieces.
+
 # ------------------------------------------
 # Step 2: Player Move Input + Move Execution
 # ------------------------------------------
@@ -64,6 +68,9 @@ def parse_move(move):
         return start_row, start_col, end_row, end_col
     except (ValueError, IndexError):
         raise ValueError("Invalid move format. Use the format 'e2 e4'.")
+
+# Reviewing the code above: we do a crucial thing here, which is to parse the move input from the user. We take in a string, split it into two parts, and convert it into a format that we can use to access the board. We also check for errors in the input and raise an error if the input is invalid
+# This is a crucial bit of code which was not present nor did I consider in my first 3 initial attempts. 
 
 # ------------------------------------------
 # Step 3: Movement Validation, Basic Rules
@@ -145,6 +152,8 @@ def is_valid_move(piece, start_row, start_col, end_row, end_col):
 
     return False
 
+# Reviewing the code above: we define a function to check if a move is valid. We check for the piece type, the direction of movement, and whether the move is blocked by another piece. We also check if the move is valid for each piece type, including special rules for pawns and castling etc. 
+
 # ------------------------------------------
 # Step 4: Check Detection & Game End Conditions
 # ------------------------------------------
@@ -219,6 +228,8 @@ def is_stalemate(color):
                             return False
     return True
 
+# Reviewing the code above: we define how a game ends, there are 3 conditions: check, checkmate, and stalemate. We define a function to check if a king is in check, and then we define a function to check if the game is in checkmate or stalemate. We do this by checking all possible moves for the pieces of the given colour. If there are no moves that can get us out of check, then it is checkmate. If there are no moves that can be made, then it is stalemate. 
+
 # ------------------------------------------
 # Main Game Loop
 # ------------------------------------------
@@ -256,3 +267,5 @@ while True:
         current_turn = 'black' if current_turn == 'white' else 'white'
     except ValueError as e:
         print(e)
+
+# Reviewing the code above: we define the main game loop, which is crucial to run the game and ensure it ends properly. We check if the game is in check, checkmate, or stalemate. We then take in the move input from the user, parse it, and check if it is valid. If it is valid, we make the move and switch turns. If it is not valid, we print an error message and continue the loop. 
