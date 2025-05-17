@@ -1,10 +1,8 @@
-# Chess Game Build: Step 1 & Step 2 Complete
-# Text-based chess — visual board, move input, live updates
-
 # ------------------------------------------
+# Chess Game: Complete Implementation
+# ------------------------------------------
+
 # Helper Functions: Piece Symbols & Printing
-# ------------------------------------------
-
 def get_symbol(piece):
     if piece is None:
         return ' . '
@@ -47,121 +45,214 @@ for col in range(8):
     board[6][col] = make_piece("white", "pawn")         # white pawns
     board[7][col] = make_piece("white", back_row[col])  # white back row
 
-# Print the starting board
+print("Initial Board Setup:")
 print_board()
-
-# Temporary pawn rule checker to avoid error in Step 2
-def is_valid_pawn_move(piece, start_row, start_col, end_row, end_col):
-    return True  # Allows all pawn moves for now
 
 # ------------------------------------------
 # Step 2: Player Move Input + Move Execution
-# Key Tasks: Player Input, Move Exedution, Basic Validation
 # ------------------------------------------
 
-# prompt for player input
-move = input ("Enter your move (e.g., e2 e4): ").strip().lower()
-start_square, end_square = move.split()
-
-start_row = 8 - int(start_square[1])
-start_col = ord(start_square[0]) - ord('a')
-
-end_row = 8 - int(end_square[1])
-end_col = ord(end_square[0]) - ord('a')
-
-piece = board[start_row][start_col]
-if piece is None:
-    print("Invalid move: No piece at the starting square.")
-    exit()
-
-if piece['kind'] == 'pawn':
-    if not is_valid_pawn_move(piece, start_row, start_col, end_row, end_col):
-        print("Invalid move for pawn.")
-        exit()
-
-board[end_row][end_col] = piece
-board[start_row][start_col] = None
-print_board()
+def parse_move(move):
+    """Parse a move string like 'e2 e4' into start and end coordinates."""
+    try:
+        start_square, end_square = move.split()
+        # Convert from chess notation to array indices
+        start_row = 8 - int(start_square[1])  # 1->7, 8->0
+        start_col = ord(start_square[0]) - ord('a')
+        end_row = 8 - int(end_square[1])
+        end_col = ord(end_square[0]) - ord('a')
+        return start_row, start_col, end_row, end_col
+    except (ValueError, IndexError):
+        raise ValueError("Invalid move format. Use the format 'e2 e4'.")
 
 # ------------------------------------------
-# Step 3: Player Move Input + Move Execution
-# Key Tasks: Movement Validation, Basic Rules, Capture Logic & Check
+# Step 3: Movement Validation, Basic Rules
 # ------------------------------------------
 
 def is_valid_move(piece, start_row, start_col, end_row, end_col):
     if piece is None:
         return False
 
-    # Basic movement validation (to be expanded)
-    if piece['kind'] == 'pawn':
-        direction = 1 if piece['color'] == 'white' else -1
-        start_row_limit = 6 if piece['color'] == 'white' else 1
-        if start_row == start_row_limit and end_row == start_row + 2 * direction and start_col == end_col:
-            return True  # Double move from starting position
-        elif end_row == start_row + direction and start_col == end_col:
-            return True  # Single move forward
-        elif end_row == start_row + direction and abs(start_col - end_col) == 1:
-            return True  # Capture move
+    # Don't allow moving to the same square
+    if start_row == end_row and start_col == end_col:
+        return False
 
-    # Add more rules for other pieces here...
+    # Don't capture own piece
+    if board[end_row][end_col] is not None and board[end_row][end_col]['color'] == piece['color']:
+        return False
+
+    # Pawn movement
+    if piece['kind'] == 'pawn':
+        direction = -1 if piece['color'] == 'white' else 1
+        start_row_limit = 6 if piece['color'] == 'white' else 1
+        # Double move from starting position
+        if start_row == start_row_limit and end_row == start_row + 2 * direction and start_col == end_col:
+            if board[start_row + direction][start_col] is not None:
+                return False  # Blocked on the way
+            return board[end_row][end_col] is None
+        # Single move forward
+        elif end_row == start_row + direction and start_col == end_col:
+            return board[end_row][end_col] is None
+        # Capture move
+        elif end_row == start_row + direction and abs(start_col - end_col) == 1:
+            return board[end_row][end_col] is not None and board[end_row][end_col]['color'] != piece['color']
+        else:
+            return False
+
+    # Rook movement
     if piece['kind'] == 'rook':
         if start_col == end_col:  # Vertical move
             step = 1 if end_row > start_row else -1
             for r in range(start_row + step, end_row, step):
-                if board[r][start_col] is not None:  # Path is blocked
+                if board[r][start_col] is not None:
                     return False
         elif start_row == end_row:  # Horizontal move
             step = 1 if end_col > start_col else -1
             for c in range(start_col + step, end_col, step):
-                if board[start_row][c] is not None:  # Path is blocked
+                if board[start_row][c] is not None:
                     return False
         else:
-            return False  # Rooks can only move in straight lines
+            return False
+        return True
 
-        # Ensure destination is empty or occupied by an opponent's piece
-        if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
-            return True
-        
+    # Bishop movement
     if piece['kind'] == 'bishop':
-        # Check if the move is diagonal
         if abs(start_row - end_row) != abs(start_col - end_col):
-            return False  # Bishops can only move diagonally
-
-        # Determine direction of movement
+            return False
         row_step = 1 if end_row > start_row else -1
         col_step = 1 if end_col > start_col else -1
-
-        # Check if the path is clear
         r, c = start_row + row_step, start_col + col_step
         while r != end_row and c != end_col:
-            if board[r][c] is not None:  # Path is blocked
+            if board[r][c] is not None:
                 return False
             r += row_step
             c += col_step
+        return True
 
-        # Final square check
-        if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
-            return True
-        
+    # Queen movement
     if piece['kind'] == 'queen':
         # Combine rook and bishop movement rules
-        if (start_col == end_col or start_row == end_row):  # Rook-like movement
-            step = 1 if end_row > start_row else -1
-            for r in range(start_row + step, end_row, step):
-                if board[r][start_col] is not None:  # Path is blocked
-                    return False
-        elif abs(start_row - end_row) == abs(start_col - end_col):  # Bishop-like movement
-            row_step = 1 if end_row > start_row else -1
-            col_step = 1 if end_col > start_col else -1
-            r, c = start_row + row_step, start_col + col_step
-            while r != end_row and c != end_col:
-                if board[r][c] is not None:  # Path is blocked
-                    return False
-                r += row_step
-                c += col_step
+        return is_valid_move({"color": piece['color'], "kind": "rook"}, start_row, start_col, end_row, end_col) or \
+               is_valid_move({"color": piece['color'], "kind": "bishop"}, start_row, start_col, end_row, end_col)
 
-            # Final square check
-            if board[end_row][end_col] is None or board[end_row][end_col]['color'] != piece['color']:
-                return True
+    # King movement
+    if piece['kind'] == 'king':
+        return abs(start_row - end_row) <= 1 and abs(start_col - end_col) <= 1
 
-    return False  # Default to invalid move
+    # Knight movement
+    if piece['kind'] == 'knight':
+        return (abs(start_row - end_row), abs(start_col - end_col)) in [(2, 1), (1, 2)]
+
+    return False
+
+# ------------------------------------------
+# Step 4: Check Detection & Game End Conditions
+# ------------------------------------------
+
+def is_in_check(color):
+    """Check if the king of the given color is in check."""
+    # Find the king's position
+    king_position = None
+    for row in range(8):
+        for col in range(8):
+            piece = board[row][col]
+            if piece and piece['kind'] == 'king' and piece['color'] == color:
+                king_position = (row, col)
+                break
+        if king_position:
+            break
+    
+    if not king_position:
+        return False  # This shouldn't happen in a normal game
+    
+    # Check if any opponent piece can capture the king
+    opponent_color = 'white' if color == 'black' else 'black'
+    for row in range(8):
+        for col in range(8):
+            piece = board[row][col]
+            if piece and piece['color'] == opponent_color:
+                if is_valid_move(piece, row, col, king_position[0], king_position[1]):
+                    return True
+    return False
+
+def is_checkmate(color):
+    if not is_in_check(color):
+        return False
+    
+    # Try all possible moves for all pieces of the given color
+    for start_row in range(8):
+        for start_col in range(8):
+            piece = board[start_row][start_col]
+            if piece and piece['color'] == color:
+                for end_row in range(8):
+                    for end_col in range(8):
+                        if is_valid_move(piece, start_row, start_col, end_row, end_col):
+                            # Make the move temporarily
+                            captured_piece = board[end_row][end_col]
+                            board[end_row][end_col] = piece
+                            board[start_row][start_col] = None
+                            
+                            # Check if still in check
+                            still_in_check = is_in_check(color)
+                            
+                            # Undo the move
+                            board[start_row][start_col] = piece
+                            board[end_row][end_col] = captured_piece
+                            
+                            # If any move gets us out of check, it's not checkmate
+                            if not still_in_check:
+                                return False
+    
+    # If we get here, no moves can get us out of check
+    return True
+
+def is_stalemate(color):
+    if is_in_check(color):
+        return False
+    for start_row in range(8):
+        for start_col in range(8):
+            piece = board[start_row][start_col]
+            if piece and piece['color'] == color:
+                for end_row in range(8):
+                    for end_col in range(8):
+                        if is_valid_move(piece, start_row, start_col, end_row, end_col):
+                            return False
+    return True
+
+# ------------------------------------------
+# Main Game Loop
+# ------------------------------------------
+
+current_turn = 'white'
+
+while True:
+    print(f"\n{current_turn.capitalize()}'s turn")
+    if is_in_check(current_turn):
+        print(f"{current_turn.capitalize()} is in check!")
+
+    if is_checkmate(current_turn):
+        print(f"Checkmate! {current_turn.capitalize()} loses.")
+        break
+    if is_stalemate(current_turn):
+        print("Stalemate! The game is a draw.")
+        break
+
+    move = input("Enter your move (e.g., e2 e4): ").strip().lower()
+    try:
+        start_row, start_col, end_row, end_col = parse_move(move)
+        piece = board[start_row][start_col]
+
+        if piece is None or piece['color'] != current_turn:
+            print("Invalid move: No valid piece at the starting square.")
+            continue
+        if not is_valid_move(piece, start_row, start_col, end_row, end_col):
+            print("Invalid move for the selected piece.")
+            continue
+
+        # Make the move
+        board[end_row][end_col] = piece
+        board[start_row][start_col] = None
+        print_board()
+        current_turn = 'black' if current_turn == 'white' else 'white'
+    except ValueError as e:
+        print(e)
