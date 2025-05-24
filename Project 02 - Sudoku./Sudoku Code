@@ -1,1 +1,100 @@
+# Sudoku Solver Game/Tool
+# Broken down intom 5 phases: this will be my second personal python project. 
+# Consisting of 5 Phases:
+
+# Phase 1: Core Setup
+# Task 1: Grid Strucuture Defined - represent a 9x9 board with placeholders, establish a way to load in a puzzle (hardcoded or from a file)
+# Task 2: Visual Display Ready - Print the grid to console and add lines to separate the 3x3 boxes for reading
+
+board = [ # bit annoyed here as I did something similar with Chess, create a variable and define it as a list of lists.
+    [7, 8, 0, 4, 0, 0, 1, 2, 0],
+    [6, 0, 0, 0, 7, 5, 0, 0, 9],
+    [0, 0, 0, 6, 0, 1, 0, 7, 8],
+    [0, 0, 7, 0, 4, 0, 2, 6, 0],
+    [0, 0, 1, 0, 5, 0, 9, 3, 0],
+    [9, 0, 4, 0, 6, 0, 0, 0, 5],
+    [0, 7, 0, 3, 0, 0, 0, 1, 2],
+    [1, 2, 0, 0, 0, 7, 4, 0, 0],
+    [0, 4, 9, 2, 0, 6, 0, 0, 7]
+]
+
+for i in range(len(board)): # actually tossed this at cursos as the original code was incorrect.
+    if i % 3 == 0 and i != 0:
+        print("-" * 21)
+    
+    row_str = ""
+    for j in range(len(board[i])):
+        if j % 3 == 0 and j != 0:
+            row_str += "| "
+        row_str += str(board[i][j]) + " "
+    print(row_str)
+    
+# Phase 1 Review: As I mentioned a bit annoyed as I did something similar with chess and knew a list of lists was the way to go. Beyond that also tossed line 21 through to 24 to cursor. As I kept getting visual errors.
+
+# Phase 2: Logic Foundations
+# Task 1: Empty Cell Locator Works - function to find the next empty cell and returns location in a consistent format
+# Task 2: Validation System Complete - check if a number can be placed in a cell and is valid across row, column, and 3x3 grid.
+
+def find(empty_cell):
+    for i in range(len(board)):
+        for j in range(len(board[0])):
+            if board[i][j] == 0:
+                return (i, j)
+    return None
+
+def validate(board, number, position): 
+    # Check row
+    for i in range(len(board)):
+        if board[position[0]][i] == number and position[1] != i:
+            return False
+            
+    # Check column
+    for i in range(len(board)):
+        if board[i][position[1]] == number and position[0] != i:
+            return False
+            
+    # Check 3x3 box
+    box_x = position[1] // 3
+    box_y = position[0] // 3
+    for i in range(box_y * 3, box_y * 3 + 3):
+        for j in range(box_x * 3, box_x * 3 + 3):
+            if board[i][j] == number and (i, j) != position:
+                return False
+                
+    return True
+
+# Phase 3: Solver Engine
+# Task 1: Recursive backtracking algorithm in place, fills all valid cells and backtracks if stuck, solves any vali board completely
+# Task 2: Solver tested on multiple boards, verify performance on easy, medium, and hard puizzles, also compare before/after boards for correctness.
+
+def solve(board):
+    find = empty(board)
+    if not find:
+        return True
+    else:
+        row,col = find
+        for i in range(1,10):
+            if validate(board, i, (row, col)):
+                board[row][col] = i
+
+                if solve(board):
+                    return True
+                board[row][col] = 0
+        return False
+
+print("Unsolved Board:")
+print_board(board)
+solve(board)
+print("Solved Board:")
+print_board(board)
+
+
+# Phase 4: Usability Enhacements (Opitional)
+# Task 1: User Board Input - allow user to create and validate their board, validate entries before solving
+# Task 2: Timer/Performance Metrics - display time taken and number of recursive calls (for fun)
+
+#Phase 5: Stretch Goals (Optional)
+# Task 1: GUI Interface - Build visual interface with Tkinter or Pygame, allow clicking, typing numbers and pressing "soleve"
+# Task 2: Sudoku Generator - create new puzzles of varing difficulty, ensure generated puzzle has only one unique solution.  
+
 
