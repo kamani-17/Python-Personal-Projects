@@ -68,12 +68,12 @@ def validate(board, number, position):
 # Task 2: Solver tested on multiple boards, verify performance on easy, medium, and hard puizzles, also compare before/after boards for correctness.
 
 def solve(board):
-    find = empty(board)
-    if not find:
+    empty_cell = find(board)
+    if not empty_cell:
         return True
     else:
-        row,col = find
-        for i in range(1,10):
+        row, col = empty_cell
+        for i in range(1, 10):
             if validate(board, i, (row, col)):
                 board[row][col] = i
 
@@ -82,10 +82,22 @@ def solve(board):
                 board[row][col] = 0
         return False
 
+def print_board(board):
+    for i in range(len(board)):
+        if i % 3 == 0 and i != 0:
+            print("-" * 21)
+        
+        row_str = ""
+        for j in range(len(board[i])):
+            if j % 3 == 0 and j != 0:
+                row_str += "| "
+            row_str += str(board[i][j]) + " "
+        print(row_str)
+
 print("Unsolved Board:")
 print_board(board)
 solve(board)
-print("Solved Board:")
+print("\nSolved Board:")
 print_board(board)
 
 
@@ -93,8 +105,71 @@ print_board(board)
 # Task 1: User Board Input - allow user to create and validate their board, validate entries before solving
 # Task 2: Timer/Performance Metrics - display time taken and number of recursive calls (for fun)
 
+def get_user_board():
+    print("Enter your Sudoku board row by row. Use numbers 1-9 for filled cells and 0 for empty cells.")
+    user_board = []
+    for i in range(9):
+        while True:
+            try:
+                row = input(f"Enter row {i+1}: ")
+                row_values = [int(num) for num in row.split()]
+                
+                # Check if we got exactly 9 numbers
+                if len(row_values) != 9:
+                    print("Error: Please enter exactly 9 numbers!")
+                    continue
+                
+                # Check if all numbers are between 0-9
+                if not all(0 <= num <= 9 for num in row_values):
+                    print("Error: Numbers must be between 0 and 9!")
+                    continue
+                
+                user_board.append(row_values)
+                break
+                
+            except ValueError:
+                print("Error: Please enter only numbers!")
+    
+    return user_board
+
+# Test the user input
+print("\nLet's try your own Sudoku board!")
+user_board = get_user_board()
+print("\nYour entered board:")
+print_board(user_board)
+
+import time
+
+start_time = time.time()
+
+if solve(user_board):
+    end_time = time.time()
+    print(f"\nSolved the board in {end_time - start_time:.4f} seconds")
+else:
+    print("\nNo solution found. Please check your board and try again.")
+
+print_board(user_board)
+
+def solve(board, count=0):
+    empty_cell = find(board)
+    if not empty_cell:
+        return True, count
+    else:
+        row, col = empty_cell
+        for i in range(1, 10):
+            if validate(board, i, (row, col)):
+                board[row][col] = i
+                count += 1
+
+                if solve(board, count):
+                    return True, count
+                board[row][col] = 0
+                count -= 1
+        return False, count
+        
+
+
 #Phase 5: Stretch Goals (Optional)
 # Task 1: GUI Interface - Build visual interface with Tkinter or Pygame, allow clicking, typing numbers and pressing "soleve"
 # Task 2: Sudoku Generator - create new puzzles of varing difficulty, ensure generated puzzle has only one unique solution.  
-
 
