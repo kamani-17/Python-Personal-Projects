@@ -67,20 +67,22 @@ def validate(board, number, position):
 # Task 1: Recursive backtracking algorithm in place, fills all valid cells and backtracks if stuck, solves any vali board completely
 # Task 2: Solver tested on multiple boards, verify performance on easy, medium, and hard puizzles, also compare before/after boards for correctness.
 
-def solve(board):
+def solve(board, count=0):
     empty_cell = find(board)
     if not empty_cell:
-        return True
+        return True, count
     else:
         row, col = empty_cell
         for i in range(1, 10):
             if validate(board, i, (row, col)):
                 board[row][col] = i
+                count += 1
 
-                if solve(board):
-                    return True
+                if solve(board, count)[0]:
+                    return True, count
                 board[row][col] = 0
-        return False
+                count -= 1
+        return False, count
 
 def print_board(board):
     for i in range(len(board)):
@@ -141,35 +143,257 @@ print_board(user_board)
 import time
 
 start_time = time.time()
+success, attempts = solve(user_board)
+end_time = time.time()
 
-if solve(user_board):
-    end_time = time.time()
+if success:
     print(f"\nSolved the board in {end_time - start_time:.4f} seconds")
+    print(f"Total number of attempts: {attempts}")
 else:
     print("\nNo solution found. Please check your board and try again.")
 
 print_board(user_board)
 
-def solve(board, count=0):
-    empty_cell = find(board)
-    if not empty_cell:
-        return True, count
-    else:
-        row, col = empty_cell
-        for i in range(1, 10):
-            if validate(board, i, (row, col)):
-                board[row][col] = i
-                count += 1
-
-                if solve(board, count):
-                    return True, count
-                board[row][col] = 0
-                count -= 1
-        return False, count
-        
-
-
 #Phase 5: Stretch Goals (Optional)
 # Task 1: GUI Interface - Build visual interface with Tkinter or Pygame, allow clicking, typing numbers and pressing "soleve"
+import tkinter as tk
+from tkinter import messagebox
+import random
+
 # Task 2: Sudoku Generator - create new puzzles of varing difficulty, ensure generated puzzle has only one unique solution.  
+
+def generate_solved_board():
+    # Create an empty board
+    board = [[0 for _ in range(9)] for _ in range(9)]
+    
+    # Fill the diagonal 3x3 boxes first (they are independent)
+    for box in range(3):
+        numbers = list(range(1, 10))
+        random.shuffle(numbers)
+        for i in range(3):
+            for j in range(3):
+                board[box * 3 + i][box * 3 + j] = numbers[i * 3 + j]
+    
+    # Solve the rest of the board
+    success, _ = solve(board)
+    if not success:
+        return None
+    return board
+
+def remove_numbers(board, difficulty):
+    # Make a copy of the solved board
+    puzzle = [row[:] for row in board]
+    
+    # Define number of cells to remove based on difficulty
+    cells_to_remove = {
+        'easy': 30,    # 30 empty cells
+        'medium': 40,  # 40 empty cells
+        'hard': 50     # 50 empty cells
+    }
+    
+    # Get all cell positions
+    positions = [(i, j) for i in range(9) for j in range(9)]
+    random.shuffle(positions)
+    
+    # Remove numbers
+    for i, j in positions[:cells_to_remove[difficulty]]:
+        puzzle[i][j] = 0
+    
+    return puzzle
+
+def has_unique_solution(puzzle):
+    # Make a copy of the puzzle
+    board = [row[:] for row in puzzle]
+    
+    # Count solutions
+    solutions = 0
+    
+    def count_solutions(board):
+        nonlocal solutions
+        if solutions > 1:  # Stop if we found more than one solution
+            return
+        
+        empty = find(board)
+        if not empty:
+            solutions += 1
+            return
+        
+        row, col = empty
+        for num in range(1, 10):
+            if validate(board, num, (row, col)):
+                board[row][col] = num
+                count_solutions(board)
+                board[row][col] = 0
+    
+    count_solutions(board)
+    return solutions == 1
+
+def generate_puzzle(difficulty='medium'):
+    while True:
+        # Generate a solved board
+        solved_board = generate_solved_board()
+        if solved_board is None:
+            continue
+        
+        # Remove numbers to create puzzle
+        puzzle = remove_numbers(solved_board, difficulty)
+        
+        # Check if puzzle has unique solution
+        if has_unique_solution(puzzle):
+            return puzzle, solved_board
+
+class SudokuGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Sudoku Solver")
+        self.root.geometry("540x600")
+        
+        # Create main frame
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(pady=20)
+        
+        # Create 9x9 grid of entry widgets
+        self.cells = {}
+        for i in range(9):
+            for j in range(9):
+                cell = tk.Entry(
+                    self.main_frame,
+                    width=2,
+                    font=('Arial', 18),
+                    justify='center'
+                )
+                cell.grid(row=i, column=j, padx=1, pady=1)
+                
+                # Add borders for 3x3 boxes
+                if i % 3 == 0 and i != 0:
+                    cell.grid(pady=(10, 1))
+                if j % 3 == 0 and j != 0:
+                    cell.grid(padx=(10, 1))
+                
+                # Store cell reference
+                self.cells[(i, j)] = cell
+        
+        # Create buttons frame
+        self.button_frame = tk.Frame(self.root)
+        self.button_frame.pack(pady=20)
+        
+        # Solve button
+        self.solve_button = tk.Button(
+            self.button_frame,
+            text="Solve",
+            command=self.solve_puzzle,
+            font=('Arial', 12)
+        )
+        self.solve_button.pack(side=tk.LEFT, padx=5)
+        
+        # Clear button
+        self.clear_button = tk.Button(
+            self.button_frame,
+            text="Clear",
+            command=self.clear_board,
+            font=('Arial', 12)
+        )
+        self.clear_button.pack(side=tk.LEFT, padx=5)
+        
+        # Create difficulty frame
+        self.difficulty_frame = tk.Frame(self.root)
+        self.difficulty_frame.pack(pady=10)
+        
+        # Difficulty label
+        tk.Label(
+            self.difficulty_frame,
+            text="Difficulty:",
+            font=('Arial', 12)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Difficulty buttons
+        for diff in ['Easy', 'Medium', 'Hard']:
+            btn = tk.Button(
+                self.difficulty_frame,
+                text=diff,
+                command=lambda d=diff.lower(): self.generate_new_puzzle(d),
+                font=('Arial', 12)
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+    
+    def generate_new_puzzle(self, difficulty):
+        self.clear_board()
+        # Disable buttons during generation
+        self.solve_button.config(state='disabled')
+        self.clear_button.config(state='disabled')
+        for child in self.difficulty_frame.winfo_children():
+            if isinstance(child, tk.Button):
+                child.config(state='disabled')
+        
+        # Update the window to show disabled state
+        self.root.update()
+        
+        try:
+            puzzle, _ = generate_puzzle(difficulty)
+            self.set_board(puzzle)
+            messagebox.showinfo("New Puzzle", f"Generated a new {difficulty} puzzle!")
+        finally:
+            # Re-enable buttons
+            self.solve_button.config(state='normal')
+            self.clear_button.config(state='normal')
+            for child in self.difficulty_frame.winfo_children():
+                if isinstance(child, tk.Button):
+                    child.config(state='normal')
+    
+    def get_board(self):
+        board = []
+        for i in range(9):
+            row = []
+            for j in range(9):
+                value = self.cells[(i, j)].get()
+                if value == "":
+                    row.append(0)
+                else:
+                    try:
+                        num = int(value)
+                        if 1 <= num <= 9:
+                            row.append(num)
+                        else:
+                            messagebox.showerror("Error", "Numbers must be between 1 and 9!")
+                            return None
+                    except ValueError:
+                        messagebox.showerror("Error", "Please enter only numbers!")
+                        return None
+            board.append(row)
+        return board
+    
+    def set_board(self, board):
+        for i in range(9):
+            for j in range(9):
+                value = board[i][j]
+                if value != 0:
+                    self.cells[(i, j)].delete(0, tk.END)
+                    self.cells[(i, j)].insert(0, str(value))
+    
+    def solve_puzzle(self):
+        board = self.get_board()
+        if board is None:
+            return
+        
+        start_time = time.time()
+        success, attempts = solve(board)
+        end_time = time.time()
+        
+        if success:
+            self.set_board(board)
+            messagebox.showinfo("Success", 
+                f"Solved in {end_time - start_time:.2f} seconds\n"
+                f"Total attempts: {attempts}")
+        else:
+            messagebox.showerror("Error", "No solution exists!")
+    
+    def clear_board(self):
+        for cell in self.cells.values():
+            cell.delete(0, tk.END)
+
+# Create and run the GUI
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SudokuGUI(root)
+    root.mainloop()
 
