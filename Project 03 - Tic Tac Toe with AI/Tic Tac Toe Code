@@ -1,1 +1,132 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+import tkinter.simpledialog as simpledialog
 
+# --- Game Logic Functions ---
+def check_win(board, player):
+    win_combinations = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ]
+    for combo in win_combinations:
+        if board[combo[0]] == board[combo[1]] == board[combo[2]] == player:
+            return True
+    return False
+
+def check_tie(board):
+    return " " not in board
+
+def ai_move(board, ai_marker, player_marker):
+    # 1. Try to win
+    for i in range(9):
+        if board[i] == " ":
+            board[i] = ai_marker
+            if check_win(board, ai_marker):
+                return i
+            board[i] = " "
+    # 2. Try to block player
+    for i in range(9):
+        if board[i] == " ":
+            board[i] = player_marker
+            if check_win(board, player_marker):
+                board[i] = ai_marker
+                return i
+            board[i] = " "
+    # 3. Otherwise, pick random
+    empty_positions = [i for i, spot in enumerate(board) if spot == " "]
+    if empty_positions:
+        ai_choice = random.choice(empty_positions)
+        board[ai_choice] = ai_marker
+        return ai_choice
+    return None
+
+# --- GUI Setup ---
+root = tk.Tk()
+root.title("Tic Tac Toe AI")
+root.update()  # Make sure the window is ready
+
+def choose_marker():
+    marker = ""
+    while marker not in ["X", "O"]:
+        marker = simpledialog.askstring("Choose Marker", "Do you want to be X or O?").upper()
+    return marker, "O" if marker == "X" else "X"
+
+def choose_first_player():
+    choice = ""
+    while choice not in ["PLAYER", "AI"]:
+        choice = simpledialog.askstring("Who Goes First?", "Who should go first? (PLAYER/AI)").upper()
+    return choice == "AI"
+
+player_marker, ai_marker = choose_marker()
+ai_goes_first = choose_first_player()
+
+board = [" " for _ in range(9)]
+buttons = []
+
+# --- Button Click Handler ---
+def on_button_click(i, j):
+    idx = i * 3 + j
+    if board[idx] == " ":
+        board[idx] = player_marker
+        buttons[i][j]["text"] = player_marker
+        buttons[i][j]["state"] = "disabled"
+        if check_win(board, player_marker):
+            messagebox.showinfo("Game Over", "You Win! Congrats To The Winner!!")
+            reset_board()
+            return
+        if check_tie(board):
+            messagebox.showinfo("Game Over", "It seems to be a tie folks!")
+            reset_board()
+            return
+        # AI move
+        ai_idx = ai_move(board, ai_marker, player_marker)
+        if ai_idx is not None:
+            ai_i, ai_j = divmod(ai_idx, 3)
+            buttons[ai_i][ai_j]["text"] = ai_marker
+            buttons[ai_i][ai_j]["state"] = "disabled"
+            if check_win(board, ai_marker):
+                messagebox.showinfo("Game Over", "Better Luck Next Time - AI Won!!")
+                reset_board()
+                return
+            if check_tie(board):
+                messagebox.showinfo("Game Over", "It seems to be a tie folks!")
+                reset_board()
+                return
+
+def reset_board():
+    global board
+    board = [" " for _ in range(9)]
+    for i in range(3):
+        for j in range(3):
+            buttons[i][j]["text"] = " "
+            buttons[i][j]["state"] = "normal"
+    
+    # If AI goes first, make their move after reset
+    if ai_goes_first:
+        ai_idx = ai_move(board, ai_marker, player_marker)
+        if ai_idx is not None:
+            ai_i, ai_j = divmod(ai_idx, 3)
+            buttons[ai_i][ai_j]["text"] = ai_marker
+            buttons[ai_i][ai_j]["state"] = "disabled"
+
+# --- Create 3x3 Grid of Buttons ---
+for i in range(3):
+    row = []
+    for j in range(3):
+        btn = tk.Button(root, text=" ", width=10, height=3, font=("Arial", 20),
+                        command=lambda i=i, j=j: on_button_click(i, j))
+        btn.grid(row=i, column=j)
+        row.append(btn)
+    buttons.append(row)
+
+# If AI goes first, make their initial move
+if ai_goes_first:
+    ai_idx = ai_move(board, ai_marker, player_marker)
+    if ai_idx is not None:
+        ai_i, ai_j = divmod(ai_idx, 3)
+        buttons[ai_i][ai_j]["text"] = ai_marker
+        buttons[ai_i][ai_j]["state"] = "disabled"
+
+root.mainloop()
